@@ -1,21 +1,23 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { loginUser } from "../config/firebase/firebasemethods";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { FaEye, FaEyeSlash } from "react-icons/fa"; // Importing Eye icons
 
 function Login() {
   const email = useRef();
   const password = useRef();
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        navigate("/"); 
+        navigate("/"); // Redirect to home if user is logged in
       }
     });
 
@@ -37,6 +39,10 @@ function Login() {
         setError("Login failed. Please check your credentials.");
         toast.error("Login failed. Please try again.");
       });
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
   };
 
   return (
@@ -61,14 +67,24 @@ function Login() {
               <label className="label">
                 <span className="label-text">Password</span>
               </label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                className="input input-bordered w-full max-w-xs"
-                ref={password}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  className="input input-bordered w-full max-w-xs pr-10"
+                  ref={password}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  onClick={togglePasswordVisibility}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
+
             {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
             <button type="submit" className="btn btn-accent w-full mt-6">
               Login

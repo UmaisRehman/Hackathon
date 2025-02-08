@@ -14,10 +14,16 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setConfirmPasswordVisible(!confirmPasswordVisible);
   };
 
   const register = async (e) => {
@@ -32,6 +38,9 @@ function Register() {
       toast.error("Passwords do not match.");
       return;
     }
+    
+    setLoading(true);
+
     try {
       // Create a new user
       await createUserWithEmailAndPassword(auth, emailValue, passwordValue);
@@ -47,7 +56,6 @@ function Register() {
       navigate("/login");
     } catch (error) {
       console.error("Error registering user:", error);
-      // Handle specific Firebase errors
       if (error.code === "auth/email-already-in-use") {
         setError("Email is already in use. Please use a different email.");
         toast.error("Email is already in use.");
@@ -61,6 +69,8 @@ function Register() {
         setError("Error registering user. Please try again.");
         toast.error("Registration failed.");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,33 +111,43 @@ function Register() {
               <input
                 type={passwordVisible ? "text" : "password"}
                 placeholder="Enter your password"
-                className="input input-bordered w-full max-w-xs"
+                className="input input-bordered w-full max-w-xs pr-10"
                 ref={password}
                 required
               />
               <span
-                className="absolute right-2 top-10 cursor-pointer"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
                 onClick={togglePasswordVisibility}
               >
                 {passwordVisible ? <AiOutlineEyeInvisible /> : <AiOutlineEye />}
               </span>
             </div>
-            <div className="form-control w-full max-w-xs mt-4">
+            <div className="form-control w-full max-w-xs mt-4 relative">
               <label className="label">
                 <span className="label-text">Confirm Password</span>
               </label>
               <input
-                type="password"
+                type={confirmPasswordVisible ? "text" : "password"}
                 placeholder="Confirm your password"
-                className="input input-bordered w-full max-w-xs"
+                className="input input-bordered w-full max-w-xs pr-10"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
+              <span
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer"
+                onClick={toggleConfirmPasswordVisibility}
+              >
+                {confirmPasswordVisible ? <AiOutlineEyeInvisible /> : <AiOutlineEye />}
+              </span>
             </div>
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-            <button type="submit" className="btn btn-primary w-full mt-6">
-              Register
+            <button
+              type="submit"
+              className="btn btn-primary w-full mt-6"
+              disabled={loading}
+            >
+              {loading ? "Registering..." : "Register"}
             </button>
             <div className="mt-4 text-center">
               <h1>
