@@ -2,11 +2,14 @@ import { createRoot } from 'react-dom/client';
 import './index.css';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Layout from './Layout';
-import Home from './pages/Home';
+
 import Login from './pages/Login';
 import Register from './pages/Register';
 import { ToastContainer } from 'react-toastify';  
 import 'react-toastify/dist/ReactToastify.css';  
+import Protectedroutes from './components/Protectedroutes';
+import Feeds from './pages/Feeds';
+import Profile from './pages/Profile';
 
 
 const router = createBrowserRouter([
@@ -16,7 +19,11 @@ const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <Home />
+        element: <Protectedroutes component={<Feeds />}/>
+      },
+      {
+        path: "profile",
+        element: <Protectedroutes component={<Profile />}/>
       },
       {
         path: "login",
