@@ -19,7 +19,7 @@ const RightSidebar = () => {
   ];
 
   return (
-    <div className="max-w-xs mx-auto p-4 space-y-4 bg-white shadow-md rounded-lg">
+    <div className=" mx-auto p-4 space-y-4 bg-white shadow-md rounded-lg">
       {/* You Might Like */}
       <div className="p-4 border-b">
         <h3 className="text-gray-800 font-semibold mb-3">You might like</h3>
