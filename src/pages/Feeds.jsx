@@ -1,22 +1,39 @@
 import React, { useEffect, useState } from "react";
-import { FaRegSmile, FaRegImage, FaVideo, FaRegComment, FaRegHeart, FaHeart, FaShare } from "react-icons/fa";
+import {
+  FaRegSmile,
+  FaRegImage,
+  FaRegComment,
+  FaRegHeart,
+  FaHeart,
+} from "react-icons/fa";
 import { IoSend } from "react-icons/io5";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../config/firebase/config";
-import { collection, addDoc, getDocs, updateDoc, doc, getDoc, arrayUnion, arrayRemove, orderBy, query } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  doc,
+  getDoc,
+  arrayUnion,
+  arrayRemove,
+  orderBy,
+  query,
+} from "firebase/firestore";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import RightSidebar from "../components/RightSidebar";
 import LeftSideBar from "../components/LeftSidebar";
+import CommentModal from "../components/CommentModal";
 
 const Feeds = () => {
   const auth = getAuth();
   const [user, setUser] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [postContent, setPostContent] = useState("");
   const [postImage, setPostImage] = useState("");
   const [posts, setPosts] = useState([]);
   const [commentText, setCommentText] = useState({});
-  const [expandedComments, setExpandedComments] = useState({});
+  const [selectedPost, setSelectedPost] = useState(null);
 
   useEffect(() => {
     onAuthStateChanged(auth, async (currentUser) => {
@@ -74,7 +91,6 @@ const Feeds = () => {
     };
 
     await addDoc(collection(db, "posts"), newPost);
-    setModalOpen(false);
     setPostContent("");
     setPostImage("");
     fetchPosts();
@@ -112,126 +128,166 @@ const Feeds = () => {
     fetchPosts();
   };
 
-  const toggleCommentSection = (postId) => {
-    setExpandedComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  const openCommentModal = (post) => {
+    setSelectedPost(post);
+  };
+
+  const closeCommentModal = () => {
+    setSelectedPost(null);
   };
 
   return (
-    <div className="flex bg-gray-100 min-h-screen">
+    <div className="flex bg-gray-50 min-h-screen overflow-hidden">
+      {/* Left Sidebar */}
       <div className="w-1/5 p-4 hidden md:block">
         <LeftSideBar />
       </div>
 
-      <div className="w-4/6 p-6">
-       
-      <div className="max-w-2xl mx-auto p-4">
-      <div className="bg-white rounded-lg shadow-md p-4">
-        {/* User Avatar and Input */}
-        <div className="flex items-center space-x-3">
-          <img
-            className="w-12 h-12 rounded-full object-cover"
-            src={user?.profileImage || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
-            alt="Profile"
-          />
-          <input
-            className="flex-1 bg-gray-100 border border-gray-300 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            type="text"
-            placeholder="What's on your mind?"
-            value={postContent}
-            onChange={(e) => setPostContent(e.target.value)}
+      {/* Main Feed */}
+      <div className="w-full md:w-3/5 p-6 overflow-y-auto scrollbar-hide">
+        {/* Create Post Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex items-center space-x-3">
+            <img
+              className="w-12 h-12 rounded-full object-cover"
+              src={user?.profileImage || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+              alt="Profile"
             />
-        </div>
+            <input
+              className="flex-1 bg-gray-100 border border-gray-200 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              type="text"
+              placeholder="What's on your mind?"
+              value={postContent}
+              onChange={(e) => setPostContent(e.target.value)}
+            />
+          </div>
 
-        {/* Options for Adding Media or Tagging */}
-        <div className="mt-4 flex space-x-4 text-sm text-gray-600">
-          <button className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg" onClick={uploadImage}> 
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              className="w-5 h-5 text-blue-500"
+          <div className="mt-4 flex space-x-4 text-sm text-gray-600">
+            <button
+              className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg transition duration-200"
+              onClick={uploadImage}
             >
-              <path d="M19 19l-7-7 7-7" />
-            </svg>
-            <span>Add Photo/Video</span>
-          </button>
-          <button className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              className="w-5 h-5 text-green-500"
-              >
-              <path d="M12 4v16M4 12h16" />
-            </svg>
-            <span>Tag Friends</span>
-          </button>
-          <button className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              className="w-5 h-5 text-yellow-500"
-              >
-              <path d="M12 6v12m6-6H6" />
-            </svg>
-            <span>Feeling/Activity</span>
-          </button>
-        </div>
+              <FaRegImage className="w-5 h-5 text-blue-500" />
+              <span>Add Photo/Video</span>
+            </button>
+          </div>
 
-        {/* Post Button */}
-        <div className="mt-4 flex justify-end">
-          <button
-            className={`btn btn-primary ${!postContent ? 'btn-disabled' : ''}`}
-            onClick={handlePostUpload}
-            disabled={!postContent}
+          <div className="mt-4 flex justify-end">
+            <button
+              className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition duration-200"
+              onClick={handlePostUpload}
+              disabled={!postContent}
             >
-            Post
-          </button>
+              Post
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
 
-
-
-        <div className="mt-5 space-y-4">
+        {/* Posts Section */}
+        <div className="space-y-6">
           {posts.map((post) => (
-            <div key={post.id} className="bg-white shadow-lg rounded-lg p-4">
+            <div key={post.id} className="bg-white rounded-lg shadow-md p-6">
+              {/* Post Header */}
               <div className="flex items-center space-x-3">
-                <img src={post.userImage} alt="User" className="w-10 h-10 rounded-full object-cover" />
+                <img
+                  src={post.userImage}
+                  alt="User"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
                 <div>
-                  <h3 className="font-bold">{post.userName}</h3>
-                  <p className="text-xs text-gray-500">{new Date(post.timestamp).toLocaleString()}</p>
+                  <h3 className="font-bold text-gray-800">{post.userName}</h3>
+                  <p className="text-xs text-gray-500">
+                    {new Date(post.timestamp).toLocaleString()}
+                  </p>
                 </div>
               </div>
 
-              {post.content && <p className="mt-2">{post.content}</p>}
-              {post.image && <img src={post.image} alt="Post" className="mt-2 rounded-lg w-full" />}
+              {/* Post Content */}
+              {post.content && (
+                <p className="mt-3 text-gray-700">{post.content}</p>
+              )}
 
-              <div className="flex justify-between items-center mt-3 text-gray-600">
-                <button className="flex items-center space-x-1 hover:text-blue-500" onClick={() => toggleLike(post.id, post.likes || [])}>
-                  {post.likes?.some((like) => like.uid === user?.uid) ? <FaHeart className="text-red-500" /> : <FaRegHeart />}
+              {/* Post Image */}
+              {post.image && (
+                <div className="mt-3">
+                  <img
+                    src={post.image}
+                    alt="Post"
+                    className="w-full h-auto rounded-lg object-cover"
+                    style={{ maxHeight: "500px" }}
+                  />
+                </div>
+              )}
+
+              {/* Like and Comment Buttons */}
+              <div className="flex justify-between items-center mt-4 text-gray-600">
+                <button
+                  className="flex items-center space-x-2 hover:text-blue-500 transition duration-200"
+                  onClick={() => toggleLike(post.id, post.likes || [])}
+                >
+                  {post.likes?.some((like) => like.uid === user?.uid) ? (
+                    <FaHeart className="text-red-500" />
+                  ) : (
+                    <FaRegHeart />
+                  )}
                   <span>{post.likes?.length || 0} Likes</span>
                 </button>
 
-                <button className="flex items-center space-x-1 hover:text-blue-500" onClick={() => toggleCommentSection(post.id)}>
+                <button
+                  className="flex items-center space-x-2 hover:text-blue-500 transition duration-200"
+                  onClick={() => openCommentModal(post)}
+                >
                   <FaRegComment />
                   <span>{post.comments?.length || 0} Comments</span>
                 </button>
               </div>
 
-              <div className="border-t pt-3 mt-3 flex items-center">
+              {/* Latest Comment */}
+              {post.comments?.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-start space-x-3">
+                    <img
+                      src={post.comments[post.comments.length - 1].userImage}
+                      alt="User"
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <div>
+                      <h3 className="font-bold text-gray-800">
+                        {post.comments[post.comments.length - 1].userName}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {post.comments[post.comments.length - 1].text}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* See More Button */}
+                  {post.comments.length > 1 && (
+                    <button
+                      className="text-blue-500 text-sm mt-2 hover:underline"
+                      onClick={() => openCommentModal(post)}
+                    >
+                      See more comments...
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Comment Input */}
+              <div className="border-t pt-4 mt-4 flex items-center">
                 <input
                   type="text"
                   placeholder="Write a comment..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-1 focus:ring-blue-400 ml-2"
+                  className="flex-1 bg-gray-100 border border-gray-200 rounded-full py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={commentText[post.id] || ""}
-                  onChange={(e) => setCommentText((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                  onChange={(e) =>
+                    setCommentText((prev) => ({ ...prev, [post.id]: e.target.value }))
+                  }
                 />
-                <button className="p-2 bg-pink-500 text-white rounded-full ml-2" onClick={() => addComment(post.id)}>
+                <button
+                  className="p-2 bg-blue-500 text-white rounded-full ml-2 hover:bg-blue-600 transition duration-200"
+                  onClick={() => addComment(post.id)}
+                >
                   <IoSend />
                 </button>
               </div>
@@ -240,53 +296,15 @@ const Feeds = () => {
         </div>
       </div>
 
-
-
-
-
-      
-      <div className="mt-4 mr-3">
-<RightSidebar />
-
+      {/* Right Sidebar */}
+      <div className="w-1/5 p-4 hidden md:block">
+        <RightSidebar />
       </div>
+
+      {/* Comment Modal */}
+      {selectedPost && <CommentModal post={selectedPost} onClose={closeCommentModal} />}
     </div>
   );
 };
 
 export default Feeds;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

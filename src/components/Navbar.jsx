@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../config/firebase/config";
 import { signOutUser } from "../config/firebase/firebasemethods";
 
@@ -10,6 +10,9 @@ const Navbar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
@@ -17,7 +20,7 @@ const Navbar = () => {
       if (user) {
         setIsAuthenticated(true);
 
-        // ✅ Fetch user profile from Firestore
+        // Fetch user profile from Firestore
         const userRef = doc(db, "profile", user.uid);
         const userSnap = await getDoc(userRef);
 
@@ -32,6 +35,22 @@ const Navbar = () => {
       }
     });
   }, []);
+
+  // Search users by name or email
+  const handleSearch = async () => {
+    if (!searchQuery) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsLoading(true);
+    const usersRef = collection(db, "profile");
+    const q = query(usersRef, where("name", ">=", searchQuery));
+    const querySnapshot = await getDocs(q);
+    const userList = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setSearchResults(userList);
+    setIsLoading(false);
+  };
 
   const handleSignOut = () => {
     signOutUser()
@@ -59,13 +78,60 @@ const Navbar = () => {
           </div>
 
           {/* Center - Search Input */}
-          <div className="flex-grow flex justify-center">
-            <input type="text" placeholder="Search" className="input input-bordered w-64 md:w-96 text-center" />
+          <div className="flex-grow flex justify-center relative">
+            <input
+              type="text"
+              placeholder="Search users..."
+              className="input input-bordered w-64 md:w-96 text-center"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyUp={handleSearch}
+            />
+            {/* Search Results Dropdown */}
+            {searchQuery && (
+              <div className="absolute top-12 bg-white rounded-lg shadow-md w-64 md:w-96 max-h-60 overflow-y-auto z-50">
+                {isLoading ? (
+                  <div className="p-4 text-center">Loading...</div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((user) => (
+                    <Link
+                      key={user.id}
+                      to={`/profile/${user.id}`}
+                      className="flex items-center space-x-3 p-3 hover:bg-gray-100 transition duration-200"
+                    >
+                      <img
+                        src={user.profileImage || "https://cdn-icons-png.flaticon.com/512/149/149071.png"}
+                        alt="Profile"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <div>
+                        <h3 className="font-bold text-gray-800">{user.name}</h3>
+                        <p className="text-sm text-gray-500">{user.email}</p>
+                      </div>
+                      {isAuthenticated && (
+                        <button
+                          className="ml-auto bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition duration-200"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            // Add logic to send friend request
+                            alert(`Friend request sent to ${user.name}`);
+                          }}
+                        >
+                          Add Friend
+                        </button>
+                      )}
+                    </Link>
+                  ))
+                ) : (
+                  <div className="p-4 text-center">No users found.</div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Section - Profile and User Name */}
           <div className="flex items-center space-x-4">
-            {/* ✅ Show User Name When Logged In */}
+            {/* Show User Name When Logged In */}
             {isAuthenticated && userData?.name && (
               <span className="text-lg font-semibold text-white">{userData.name}</span>
             )}
@@ -74,7 +140,7 @@ const Navbar = () => {
             <div className="dropdown dropdown-end">
               <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
                 <div className="w-10 rounded-full border border-white">
-                  {/* ✅ Show User's Profile Image If Logged In, Else Show Dummy */}
+                  {/* Show User's Profile Image If Logged In, Else Show Dummy */}
                   <img
                     alt="User Avatar"
                     src={
@@ -107,28 +173,6 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Mobile Dropdown Menu */}
-      <div className={`md:hidden transform transition-transform duration-300 ${isOpen ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"} origin-top bg-blue-600 p-4`}>
-        <Link to="/" className="block text-white py-2 hover:bg-blue-500 rounded-md px-4">Home</Link>
-        <Link to="/dashboard" className="block text-white py-2 hover:bg-blue-500 rounded-md px-4">Dashboard</Link>
-        {isAuthenticated ? (
-          <>
-            <Link to="/profile" className="block text-white py-2 hover:bg-blue-500 rounded-md px-4">Profile</Link>
-            <button 
-              onClick={handleSignOut} 
-              className="block w-full text-left text-white py-2 hover:bg-red-500 rounded-md px-4 transition duration-300"
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="block text-white py-2 hover:bg-blue-500 rounded-md px-4">Login</Link>
-            <Link to="/register" className="block text-white py-2 hover:bg-blue-500 rounded-md px-4">Register</Link>
-          </>
-        )}
       </div>
     </div>
   );
